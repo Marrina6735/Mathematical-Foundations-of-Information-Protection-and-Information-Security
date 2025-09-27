@@ -1,8 +1,16 @@
 ---
 ## Front matter
-title: "Шаблон отчёта по лабораторной работе"
-subtitle: "Простейший вариант"
-author: "Дмитрий Сергеевич Кулябов"
+title: "Отчёт по лабораторной работе №2
+
+
+Математические основы защиты информации и информационной безопасности"
+subtitle: "Шифры перестановки"
+author: "Выполнила: Коняева Марина Александровна, 
+
+
+НФИмд-01-25, 1032259383"
+
+
 
 ## Generic otions
 lang: ru-RU
@@ -16,7 +24,6 @@ csl: pandoc/csl/gost-r-7-0-5-2008-numeric.csl
 toc: true # Table of contents
 toc-depth: 2
 lof: true # List of figures
-lot: true # List of tables
 fontsize: 12pt
 linestretch: 1.5
 papersize: a4
@@ -25,8 +32,8 @@ documentclass: scrreprt
 polyglossia-lang:
   name: russian
   options:
-	- spelling=modern
-	- babelshorthands=true
+  - spelling=modern
+  - babelshorthands=true
 polyglossia-otherlangs:
   name: english
 ## I18n babel
@@ -56,7 +63,6 @@ figureTitle: "Рис."
 tableTitle: "Таблица"
 listingTitle: "Листинг"
 lofTitle: "Список иллюстраций"
-lotTitle: "Список таблиц"
 lolTitle: "Листинги"
 ## Misc options
 indent: true
@@ -66,54 +72,189 @@ header-includes:
   - \floatplacement{figure}{H} # keep figures where there are in the text
 ---
 
-# Цель работы
-
-Здесь приводится формулировка цели лабораторной работы. Формулировки
-цели для каждой лабораторной работы приведены в методических
-указаниях.
-
-Цель данного шаблона --- максимально упростить подготовку отчётов по
-лабораторным работам.  Модифицируя данный шаблон, студенты смогут без
-труда подготовить отчёт по лабораторным работам, а также познакомиться
-с основными возможностями разметки Markdown.
-
-# Задание
-
-Здесь приводится описание задания в соответствии с рекомендациями
-методического пособия и выданным вариантом.
-
 # Теоретическое введение
 
-Здесь описываются теоретические аспекты, связанные с выполнением работы.
+- Маршрутное шифрование 
+Текст записывается в таблицу построчно, а считывается по столбцам в порядке, заданном алфавитной сортировкой букв пароля. Ключ — размер таблицы и пароль.
 
-Например, в табл. [-@tbl:std-dir] приведено краткое описание стандартных каталогов Unix.
+- Шифрование решёткой Флейснера 
+Используется трафарет с прорезями, который поворачивается на 90° после каждого заполнения. Текст вписывается в прорези, а результат считывается из полной таблицы по столбцам согласно паролю.
 
-: Описание некоторых каталогов файловой системы GNU Linux {#tbl:std-dir}
+- Шифр Виженера
+Каждая буква текста сдвигается на величину, определяемую соответствующей буквой ключевого слова. Шифрование осуществляется с помощью таблицы или формулы сложения позиций букв по модулю алфавита.
 
-| Имя каталога | Описание каталога                                                                                                          |
-|--------------|----------------------------------------------------------------------------------------------------------------------------|
-| `/`          | Корневая директория, содержащая всю файловую                                                                               |
-| `/bin `      | Основные системные утилиты, необходимые как в однопользовательском режиме, так и при обычной работе всем пользователям     |
-| `/etc`       | Общесистемные конфигурационные файлы и файлы конфигурации установленных программ                                           |
-| `/home`      | Содержит домашние директории пользователей, которые, в свою очередь, содержат персональные настройки и данные пользователя |
-| `/media`     | Точки монтирования для сменных носителей                                                                                   |
-| `/root`      | Домашняя директория пользователя  `root`                                                                                   |
-| `/tmp`       | Временные файлы                                                                                                            |
-| `/usr`       | Вторичная иерархия для данных пользователя                                                                                 |
 
-Более подробно об Unix см. в [@gnu-doc:bash;@newham:2005:bash;@zarrelli:2017:bash;@robbins:2013:bash;@tannenbaum:arch-pc:ru;@tannenbaum:modern-os:ru].
+# Цель работы
+
+Целью данной работы является изучение алгоритмов шифрования перестановки,
+принцип его работы, реализация на Julia.
 
 # Выполнение лабораторной работы
 
-Описываются проведённые действия, в качестве иллюстрации даётся ссылка на иллюстрацию (рис. [-@fig:001])
+## Маршрутное шифрование
 
-![Название рисунка](image/placeimg_800_600_tech.jpg){ #fig:001 width=70% }
+Реализация:
+
+```julia
+function route_encrypt(message, key, rows, cols)
+        message = filter(!isspace, message)
+        matrix = fill('_', rows, cols)
+        index = 1
+        new_message = ""
+        for i = 1:rows
+                for j = 1:cols
+                        if index != rows * cols
+                                matrix[i, j] = message[index]
+                                index += 1
+                        end
+                end
+        end
+        for j in sort(collect(key))
+                for i = 1:rows
+                        new_message *= (matrix[i, (findfirst(j, key))])
+                end
+        end
+        return new_message
+end
+
+message = "this is a test message!"
+rows, cols = 4, 5
+key = "water"
+println(route_encrypt(message, key, rows, cols))
+```
+
+Выполнение:
+
+```
+$ julia route.jl 
+hamgses!iss_iteetsta
+```
+
+## Шифрование с помощью решеток
+
+Реализация:
+
+```julia
+function rails_encrypt(text, key, k)
+        grid = fill(" ", 2 * k, 2 * k)
+        matrix = fill(" ", k, k)
+        index = 1
+        new_message = ""
+        text = replace(text, " " => "")
+        for i in 1:k
+                for j in 1:k
+                        grid[i, j] = string(index)
+                        matrix[i, j] = string(index)
+                        index += 1
+                end
+        end
+        for i = 1:(size(grid)[1])
+                for j = (size(grid)[1]):-1:1
+                        if grid[i, j] == " "
+                                matrix = rotr90(matrix)
+                                grid[(i+k-1):-1:i, j:-1:(j-k+1)] = matrix[k:-1:1, k:-1:1]
+                        end
+                end
+        end
+
+        index = 1
+        arr = Vector{String}()
+
+        for r in text
+                checker = false
+                for i = 1:(size(grid)[1])
+                        for j = 1:(size(grid)[2])
+                                if grid[i, j] == string(index) && checker == false
+                                        if ((string(i + 1, " ", j) ∉ arr) && (string(i - 1, " ", j) ∉ arr) && (string(i, " ", j - 1) ∉ arr) && (string(i, " ", j + 1) ∉ arr))
+                                                grid[i, j] = string(r)
+                                                push!(arr, string(i, " ", j))
+                                                checker = true
+                                        end
+                                end
+                        end
+                        if checker == true
+                                index += 1
+                                if index > k^2
+                                        index = 1
+                                        empty!(arr)
+                                end
+                                break
+                        end
+                end
+        end
+
+        for j in sort(collect(key))
+                for i = 1:2k
+                        new_message *= (grid[i, (findfirst(j, key))])
+                        if tryparse(Float64, string(last(new_message))) != nothing
+                                new_message = replace(new_message, last(new_message) => ' ')
+                        end
+                end
+        end
+        return new_message
+
+end
+
+text = "Hello, New World!"
+key = "keys"
+k = 2
+println(rails_encrypt(text, key, k))
+```
+
+Выполнение:
+
+```
+$ julia ./rails.jl 
+,lr!HNdwoeolle W
+```
+
+## Таблица Вижинера
+
+Реализация:
+
+```julia
+function vigenere_encrypt(text, key)
+        alphabet = 'a':'z'
+        output = ""
+        key_index = 1
+
+        for i in text
+                if isletter(i)
+                        offset = findfirst(isequal(key[key_index]), alphabet) - 1
+                        index = findfirst(isequal(i), alphabet) + offset
+                        index > 26 && (index -= 26)
+                        output *= alphabet[index]
+                        key_index += 1
+                        key_index > length(key) && (key_index = 1)
+                else
+                        output *= i
+                end
+        end
+
+        return output
+end
+
+text = "hello world"
+key = "key"
+println(vigenere_encrypt(text, key))
+```
+
+Выполнение:
+
+```
+$ julia vigener.jl 
+rijvs uyvjn
+```
 
 # Выводы
 
-Здесь кратко описываются итоги проделанной работы.
+В данной лабораторной работе были изучены три шифра перестановки, все алгоритмы были реализованы на языке Julia и работают корректно.
 
-# Список литературы{.unnumbered}
 
-::: {#refs}
-:::
+# Список литературы. Библиография
+
+[1] Методические материалы курса.
+
+[2] Wikipedia: Caesar cipher (URL: https://en.wikipedia.org/wiki/Caesar_cipher) 
+
+[3] Официальная документация по языку Julia (URL: https://docs.julialang.org/). 
